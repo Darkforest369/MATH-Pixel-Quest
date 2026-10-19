@@ -1,7 +1,7 @@
 /*
  * Math Pixel Quest — walking prototype.
  * One scene, Arcade physics, runtime textures only.
- * Grass theme, tree borders, animated player, and crisp HUD.
+ * Grass theme, dense tree borders, chibi player with 4-way animations.
  */
 (function () {
   "use strict";
@@ -55,14 +55,13 @@
       this.bindControlsProbe();
     }
 
-    /* Texture generation — grass, trees, and player frames. */
+    /* Texture generation */
     generateTextures() {
       this.generateGrassTextures();
-      this.generateTreeTexture();
+      this.generateTreeTextures();
       this.generatePlayerFrames();
     }
 
-    /* Three distinct grass tiles to break up repetition. */
     generateGrassTextures() {
       let g;
 
@@ -91,9 +90,7 @@
       // Grass 3: Base with a tiny lighter pixel flower and dirt speck
       g = this.make.graphics({ add: false });
       paintRect(g, 0, 0, 32, 32, 0x4a8c3f);
-      // Dirt speck
-      paintRect(g, 8, 8, 2, 2, 0x6b4c3a);
-      // Flower
+      paintRect(g, 8, 8, 2, 2, 0x6b4c3a); // Dirt speck
       paintRect(g, 22, 20, 1, 1, 0xf0e68c); // yellow center
       paintRect(g, 21, 19, 1, 1, 0xffffff); // white petal
       paintRect(g, 23, 19, 1, 1, 0xffffff);
@@ -104,56 +101,43 @@
       nearest(this, "grass3");
     }
 
-    /* Tree/bush texture for the map boundaries. */
-    generateTreeTexture() {
-      const g = this.make.graphics({ add: false });
-      const w = 64;
-      const h = 64;
+    generateTreeTextures() {
+      let g;
 
-      // Trunk
-      paintRect(g, 26, 40, 12, 24, 0x5c3a21);
-      paintRect(g, 27, 40, 10, 24, 0x7a4e2e);
-      paintRect(g, 28, 40, 8, 24, 0x8b5a35);
-
-      // Leaves
-      const leafColors = [0x2d6a2e, 0x3d8c3e, 0x4a9c4b, 0x256b26];
-
-      // Bottom layer
-      g.fillStyle(leafColors[0], 1);
-      g.fillRect(8, 24, 48, 24);
-      g.fillRect(12, 20, 40, 32);
-
-      // Mid layer
-      g.fillStyle(leafColors[1], 1);
-      g.fillRect(12, 16, 40, 24);
-      g.fillRect(16, 12, 32, 32);
-
-      // Top layer
-      g.fillStyle(leafColors[2], 1);
-      g.fillRect(16, 8, 32, 20);
-      g.fillRect(20, 4, 24, 24);
-
-      // Highlights
-      g.fillStyle(leafColors[3], 1);
-      g.fillRect(18, 10, 12, 8);
-      g.fillRect(14, 18, 16, 8);
-      g.fillRect(10, 26, 20, 10);
-
-      g.generateTexture("tree", w, h);
+      // Background Tree (darker, slightly smaller)
+      g = this.make.graphics({ add: false });
+      paintRect(g, 9, 22, 6, 10, 0x3e2723); // trunk
+      paintRect(g, 0, 4, 24, 18, 0x1b5e20); // canopy base
+      paintRect(g, 4, 0, 16, 22, 0x1b5e20);
+      paintRect(g, 2, 6, 20, 14, 0x2e7d32); // highlight
+      g.generateTexture("tree_bg", 24, 32);
       g.destroy();
-      nearest(this, "tree");
+      nearest(this, "tree_bg");
+
+      // Foreground Tree (brighter, larger, distinct leaf pattern)
+      g = this.make.graphics({ add: false });
+      paintRect(g, 8, 24, 8, 12, 0x4e342e); // trunk
+      paintRect(g, 0, 6, 24, 18, 0x2e7d32); // canopy base
+      paintRect(g, 4, 0, 16, 24, 0x2e7d32);
+      paintRect(g, 2, 8, 20, 14, 0x388e3c); // mid tone
+      paintRect(g, 6, 2, 12, 18, 0x43a047); // top highlight
+      // Leaf details
+      paintRect(g, 6, 10, 2, 2, 0x1b5e20);
+      paintRect(g, 16, 14, 2, 2, 0x1b5e20);
+      paintRect(g, 12, 6, 2, 2, 0x1b5e20);
+      paintRect(g, 10, 18, 2, 2, 0x1b5e20);
+      g.generateTexture("tree_fg", 24, 36);
+      g.destroy();
+      nearest(this, "tree_fg");
     }
 
-    /* Generate 4-directional player frames with 2 walking frames per direction. */
     generatePlayerFrames() {
-      const directions = ["down", "left", "right", "up"];
-      const frames = [0, 1, 2]; // 0 = idle, 1 & 2 = walk frames
-
+      const directions = ["down", "up", "left", "right"];
       for (const dir of directions) {
-        for (const frame of frames) {
+        for (let frame = 0; frame <= 2; frame++) {
           const g = this.make.graphics({ add: false });
           this.drawPlayerFrame(g, dir, frame);
-          const key = frame === 0 ? `idle-${dir}` : `walk-${dir}-${frame}`;
+          const key = frame === 0 ? `player-idle-${dir}` : `player-walk-${dir}-${frame}`;
           g.generateTexture(key, 32, 32);
           g.destroy();
           nearest(this, key);
@@ -162,198 +146,126 @@
     }
 
     drawPlayerFrame(g, dir, frame) {
-      const OUTLINE = 0x0b0f18;
-      const SKIN = 0xf6c9a4;
-      const SKIN_SHADE = 0xd79c74;
-      const CHEEK = 0xf0a08c;
-      const MOUTH = 0xb9795a;
-      const EYE = 0x11182a;
-      const EYE_LIGHT = 0xdff2ff;
-      const HAT = 0x2f43b8;
-      const HAT_LIGHT = 0x5468e8;
-      const HAT_DARK = 0x1d2a7c;
-      const ROBE = 0x3a55cf;
-      const ROBE_LIGHT = 0x5c78ee;
-      const ROBE_DARK = 0x27399c;
-      const GOLD = 0xe9c05a;
-      const GOLD_LIGHT = 0xf7dd8e;
-      const BOOT_LIGHT = 0x9a6b46;
-      const BOOT_DARK = 0x6b4630;
+      const OUT = 0x181425;
+      const HAIR = 0x673d24;
+      const HAIR_HI = 0x8a5a3a;
+      const SKIN = 0xffd5b3;
+      const SKIN_SH = 0xdfa482;
+      const SHIRT = 0xd34c4c;
+      const SHIRT_SH = 0xa63232;
+      const SHORTS = 0x3ecbcd;
+      const SHORTS_SH = 0x2e9ea0;
+      const SHOE = 0x3b222a;
 
-      function paint(x, y, w, h, color) {
-        g.fillStyle(color, 1);
+      function f(x, y, w, h, c) {
+        g.fillStyle(c, 1);
         g.fillRect(x, y, w, h);
       }
 
-      function shadeRow(x, y, w, base, light, dark) {
-        if (w <= 0) return;
-        paint(x, y, w, 1, base);
-        if (w >= 3) {
-          paint(x, y, 1, 1, light);
-          paint(x + w - 1, y, 1, 1, dark);
-        } else if (w === 2) {
-          paint(x, y, 1, 1, light);
-        }
-      }
-
       // Shadow
-      g.fillStyle(0x03060b, 0.30);
-      g.fillRect(9, 28, 14, 1);
-      g.fillStyle(0x03060b, 0.38);
-      g.fillRect(8, 29, 16, 1);
-      g.fillStyle(0x03060b, 0.22);
-      g.fillRect(10, 30, 12, 1);
+      g.fillStyle(0x000000, 0.3);
+      g.fillRect(10, 29, 12, 2);
+      g.fillStyle(0x000000, 0.15);
+      g.fillRect(8, 29, 16, 2);
 
-      // Hat offset for left/right perspective
-      let hatOffset = 0;
-      if (dir === "left") hatOffset = -2;
-      if (dir === "right") hatOffset = 2;
-
-      // Hat cone outline
-      const coneOutline = [
-        [2, 15 + hatOffset, 3],
-        [3, 14 + hatOffset, 5],
-        [4, 13 + hatOffset, 7],
-        [5, 13 + hatOffset, 7],
-        [6, 12 + hatOffset, 9],
-        [7, 11 + hatOffset, 11],
-        [8, 11 + hatOffset, 11],
-        [9, 10 + hatOffset, 13],
-      ];
-      for (let i = 0; i < coneOutline.length; i++) {
-        const row = coneOutline[i];
-        paint(row[1], row[0], row[2], 1, OUTLINE);
+      // Body Outline
+      if (dir === 'down' || dir === 'up') {
+        f(9, 19, 14, 11, OUT);
+        f(10, 20, 12, 9, SHIRT);
+        f(10, 24, 12, 2, SHIRT_SH);
+        f(10, 26, 12, 3, SHORTS);
+        f(10, 29, 12, 1, SHORTS_SH);
+      } else {
+        f(11, 19, 10, 11, OUT);
+        f(12, 20, 8, 9, SHIRT);
+        f(12, 24, 8, 2, SHIRT_SH);
+        f(12, 26, 8, 3, SHORTS);
+        f(12, 29, 8, 1, SHORTS_SH);
       }
 
-      // Hat cone fill
-      const coneFill = [
-        [3, 15 + hatOffset, 3],
-        [4, 14 + hatOffset, 5],
-        [5, 14 + hatOffset, 5],
-        [6, 13 + hatOffset, 7],
-        [7, 12 + hatOffset, 9],
-        [8, 12 + hatOffset, 9],
-      ];
-      for (let i = 0; i < coneFill.length; i++) {
-        const row = coneFill[i];
-        shadeRow(row[1], row[0], row[2], HAT, HAT_LIGHT, HAT_DARK);
-      }
-      paint(11 + hatOffset, 9, 11, 1, GOLD);
+      // Legs & Shoes
+      let legY1 = 30, legY2 = 30;
+      if (frame === 1) legY1 = 29;
+      if (frame === 2) legY2 = 29;
 
-      // Hat brim
-      paint(7 + hatOffset, 10, 19, 3, OUTLINE);
-      paint(8 + hatOffset, 10, 17, 1, HAT_LIGHT);
-      paint(8 + hatOffset, 11, 17, 1, HAT);
-
-      // Head outline
-      paint(9, 12, 15, 8, OUTLINE);
-
-      // Head fill
-      paint(10, 13, 13, 6, SKIN);
-      paint(10, 18, 13, 1, SKIN_SHADE);
-
-      // Face details (only for down, left, right)
-      if (dir === "down") {
-        paint(12, 15, 2, 2, EYE);
-        paint(19, 15, 2, 2, EYE);
-        paint(12, 15, 1, 1, EYE_LIGHT);
-        paint(19, 15, 1, 1, EYE_LIGHT);
-        paint(11, 17, 2, 1, CHEEK);
-        paint(20, 17, 2, 1, CHEEK);
-        paint(15, 17, 2, 1, MOUTH);
-      } else if (dir === "left") {
-        paint(11, 15, 2, 2, EYE);
-        paint(11, 15, 1, 1, EYE_LIGHT);
-        paint(10, 17, 2, 1, CHEEK);
-      } else if (dir === "right") {
-        paint(19, 15, 2, 2, EYE);
-        paint(19, 15, 1, 1, EYE_LIGHT);
-        paint(20, 17, 2, 1, CHEEK);
+      if (dir === 'down' || dir === 'up') {
+        f(10, legY1, 4, 32 - legY1, OUT);
+        f(11, legY1 + 1, 2, 32 - legY1 - 1, SHOE);
+        f(18, legY2, 4, 32 - legY2, OUT);
+        f(19, legY2 + 1, 2, 32 - legY2 - 1, SHOE);
+      } else if (dir === 'right') {
+        f(17, legY2, 4, 32 - legY2, OUT);
+        f(18, legY2 + 1, 2, 32 - legY2 - 1, SHOE);
+        f(12, legY1, 4, 32 - legY1, OUT);
+        f(13, legY1 + 1, 2, 32 - legY1 - 1, SHOE);
+      } else if (dir === 'left') {
+        f(11, legY2, 4, 32 - legY2, OUT);
+        f(12, legY2 + 1, 2, 32 - legY2 - 1, SHOE);
+        f(16, legY1, 4, 32 - legY1, OUT);
+        f(17, legY1 + 1, 2, 32 - legY1 - 1, SHOE);
       }
 
-      // Body outline
-      paint(8, 19, 17, 7, OUTLINE);
-
-      // Body fill
-      shadeRow(10, 19, 13, ROBE, ROBE_LIGHT, ROBE_DARK);
-      for (let i = 20; i <= 22; i++) {
-        shadeRow(9, i, 15, ROBE, ROBE_LIGHT, ROBE_DARK);
-      }
-      paint(9, 23, 15, 1, GOLD);
-      paint(15, 23, 2, 1, GOLD_LIGHT);
-      shadeRow(9, 24, 15, ROBE, ROBE_LIGHT, ROBE_DARK);
-
-      // Boots
-      const drawBoot = (x, y) => {
-        paint(x, y, 6, 3, OUTLINE);
-        paint(x + 1, y, 4, 1, BOOT_LIGHT);
-        paint(x + 1, y + 1, 4, 1, BOOT_DARK);
-      };
-
-      if (dir === "down" || dir === "up") {
-        if (frame === 0) {
-          drawBoot(10, 25);
-          drawBoot(17, 25);
-        } else if (frame === 1) {
-          drawBoot(10, 25);
-          drawBoot(17, 26);
-        } else if (frame === 2) {
-          drawBoot(10, 26);
-          drawBoot(17, 25);
-        }
-      } else if (dir === "left") {
-        if (frame === 0) {
-          drawBoot(11, 25);
-          drawBoot(17, 25);
-        } else if (frame === 1) {
-          drawBoot(10, 25);
-          drawBoot(18, 26);
-        } else if (frame === 2) {
-          drawBoot(10, 26);
-          drawBoot(18, 25);
-        }
-      } else if (dir === "right") {
-        if (frame === 0) {
-          drawBoot(10, 25);
-          drawBoot(16, 25);
-        } else if (frame === 1) {
-          drawBoot(9, 25);
-          drawBoot(17, 26);
-        } else if (frame === 2) {
-          drawBoot(9, 26);
-          drawBoot(17, 25);
-        }
+      // Head
+      if (dir === 'down') {
+        f(8, 6, 16, 15, OUT);
+        f(9, 6, 14, 6, HAIR);
+        f(9, 12, 2, 4, HAIR);
+        f(21, 12, 2, 4, HAIR);
+        f(10, 7, 12, 2, HAIR_HI);
+        f(11, 11, 10, 9, SKIN);
+        f(11, 19, 10, 1, SKIN_SH);
+        f(13, 14, 2, 3, OUT);
+        f(19, 14, 2, 3, OUT);
+        f(13, 14, 1, 1, 0xffffff);
+        f(19, 14, 1, 1, 0xffffff);
+        f(12, 16, 2, 1, 0xff8888);
+        f(20, 16, 2, 1, 0xff8888);
+        f(16, 17, 2, 1, OUT);
+      } else if (dir === 'up') {
+        f(8, 6, 16, 15, OUT);
+        f(9, 6, 14, 14, HAIR);
+        f(10, 7, 12, 4, HAIR_HI);
+        f(9, 18, 14, 2, HAIR);
+      } else if (dir === 'right') {
+        f(9, 6, 14, 15, OUT);
+        f(10, 6, 12, 6, HAIR);
+        f(10, 12, 4, 6, HAIR);
+        f(11, 7, 10, 2, HAIR_HI);
+        f(14, 12, 8, 9, SKIN);
+        f(14, 19, 8, 1, SKIN_SH);
+        f(18, 14, 2, 3, OUT);
+        f(18, 14, 1, 1, 0xffffff);
+        f(18, 16, 2, 1, 0xff8888);
+        f(21, 15, 1, 1, SKIN_SH);
+      } else if (dir === 'left') {
+        f(9, 6, 14, 15, OUT);
+        f(10, 6, 12, 6, HAIR);
+        f(18, 12, 4, 6, HAIR);
+        f(11, 7, 10, 2, HAIR_HI);
+        f(10, 12, 8, 9, SKIN);
+        f(10, 19, 8, 1, SKIN_SH);
+        f(12, 14, 2, 3, OUT);
+        f(13, 14, 1, 1, 0xffffff);
+        f(12, 16, 2, 1, 0xff8888);
+        f(10, 15, 1, 1, SKIN_SH);
       }
     }
 
     createAnims() {
-      this.anims.create({
-        key: "walk-down",
-        frames: [{ key: "walk-down-1" }, { key: "walk-down-2" }],
-        frameRate: 8,
-        repeat: -1,
-      });
-      this.anims.create({
-        key: "walk-left",
-        frames: [{ key: "walk-left-1" }, { key: "walk-left-2" }],
-        frameRate: 8,
-        repeat: -1,
-      });
-      this.anims.create({
-        key: "walk-right",
-        frames: [{ key: "walk-right-1" }, { key: "walk-right-2" }],
-        frameRate: 8,
-        repeat: -1,
-      });
-      this.anims.create({
-        key: "walk-up",
-        frames: [{ key: "walk-up-1" }, { key: "walk-up-2" }],
-        frameRate: 8,
-        repeat: -1,
-      });
+      const dirs = ["down", "up", "left", "right"];
+      for (const dir of dirs) {
+        this.anims.create({
+          key: `walk-${dir}`,
+          frames: [
+            { key: `player-walk-${dir}-1` },
+            { key: `player-walk-${dir}-2` }
+          ],
+          frameRate: 8,
+          repeat: -1,
+        });
+      }
     }
 
-    /* Randomly place grass tiles to avoid checkerboard repetition. */
     createWorld() {
       const cols = MAP_WIDTH / TILE;
       const rows = MAP_HEIGHT / TILE;
@@ -369,26 +281,28 @@
       }
     }
 
-    /* Tree borders with invisible physics bodies for collision. */
     createBorders() {
       this.physics.world.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
-      // Top and bottom rows
-      for (let x = 32; x < MAP_WIDTH; x += 64) {
-        this.add.image(x, 32, "tree").setDepth(2);
-        this.add.image(x, MAP_HEIGHT - 32, "tree").setDepth(2);
+      // Top & Bottom Borders
+      for (let x = 12; x < MAP_WIDTH; x += 24) {
+        this.add.image(x, 32, "tree_bg").setDepth(2);
+        this.add.image(x, 38, "tree_fg").setDepth(3);
+        
+        this.add.image(x, MAP_HEIGHT - 32, "tree_bg").setDepth(2);
+        this.add.image(x, MAP_HEIGHT - 38, "tree_fg").setDepth(3);
       }
-      // Left and right columns
-      for (let y = 32; y < MAP_HEIGHT; y += 64) {
-        this.add.image(32, y, "tree").setDepth(2);
-        this.add.image(MAP_WIDTH - 32, y, "tree").setDepth(2);
-      }
-      // Corners (redundant but ensures full coverage)
-      this.add.image(32, 32, "tree").setDepth(2);
-      this.add.image(MAP_WIDTH - 32, 32, "tree").setDepth(2);
-      this.add.image(32, MAP_HEIGHT - 32, "tree").setDepth(2);
-      this.add.image(MAP_WIDTH - 32, MAP_HEIGHT - 32, "tree").setDepth(2);
 
+      // Left & Right Borders
+      for (let y = 12; y < MAP_HEIGHT; y += 24) {
+        this.add.image(32, y, "tree_bg").setDepth(2);
+        this.add.image(38, y, "tree_fg").setDepth(3);
+
+        this.add.image(MAP_WIDTH - 32, y, "tree_bg").setDepth(2);
+        this.add.image(MAP_WIDTH - 38, y, "tree_fg").setDepth(3);
+      }
+
+      // Invisible physics bodies for collision
       this.borderBodies = this.physics.add.staticGroup();
       this.addBorderBody(MAP_WIDTH / 2, 32, MAP_WIDTH, 64);
       this.addBorderBody(MAP_WIDTH / 2, MAP_HEIGHT - 32, MAP_WIDTH, 64);
@@ -397,7 +311,7 @@
     }
 
     addBorderBody(x, y, w, h) {
-      var block = this.borderBodies.create(x, y, "tree");
+      var block = this.borderBodies.create(x, y, "tree_bg");
       block.setVisible(false);
       block.displayWidth = w;
       block.displayHeight = h;
@@ -405,13 +319,13 @@
     }
 
     createPlayer() {
-      this.player = this.physics.add.sprite(MAP_WIDTH / 2, MAP_HEIGHT / 2, "idle-down");
+      this.player = this.physics.add.sprite(MAP_WIDTH / 2, MAP_HEIGHT / 2, "player-idle-down");
       this.player.setScale(2);
       this.player.setDepth(5);
       this.player.setCollideWorldBounds(true);
       this.player.body.setAllowGravity(false);
-      this.player.body.setSize(14, 16);
-      this.player.body.setOffset(9, 12);
+      this.player.body.setSize(10, 10);
+      this.player.body.setOffset(11, 20);
       this.player.refreshBody();
       this.physics.add.collider(this.player, this.borderBodies);
     }
@@ -449,7 +363,6 @@
       ]);
     }
 
-    /* High-DPI WASD UI with crisp text rendering. */
     createHud() {
       const scene = this;
       const keySize = 26;
@@ -505,18 +418,10 @@
           new Phaser.Geom.Rectangle(0, 0, keySize, keySize),
           Phaser.Geom.Rectangle.Contains
         );
-        zone.on("pointerdown", function () {
-          scene.pad[spec.flag] = true;
-        });
-        zone.on("pointerup", function () {
-          scene.pad[spec.flag] = false;
-        });
-        zone.on("pointerout", function () {
-          scene.pad[spec.flag] = false;
-        });
-        zone.on("pointerupoutside", function () {
-          scene.pad[spec.flag] = false;
-        });
+        zone.on("pointerdown", function () { scene.pad[spec.flag] = true; });
+        zone.on("pointerup", function () { scene.pad[spec.flag] = false; });
+        zone.on("pointerout", function () { scene.pad[spec.flag] = false; });
+        zone.on("pointerupoutside", function () { scene.pad[spec.flag] = false; });
 
         scene.hudKeys[spec.id] = entry;
       });
@@ -533,38 +438,20 @@
     }
 
     setHudKeyActive(id, active) {
-      if (!this.hudKeys) {
-        return;
-      }
+      if (!this.hudKeys) return;
       var entry = this.hudKeys[id];
-      if (!entry || entry.active === active) {
-        return;
-      }
+      if (!entry || entry.active === active) return;
       entry.active = active;
       this.drawHudKey(entry, active);
       entry.label.setColor(active ? KEY_ACTIVE_TEXT : KEY_IDLE_TEXT);
     }
 
     refreshHud() {
-      if (!this.hudKeys || !this.keys) {
-        return;
-      }
-      var w =
-        this.keyHeld("KeyW", this.keys.W) ||
-        this.keyHeld("ArrowUp", this.keys.UP) ||
-        this.pad.up;
-      var a =
-        this.keyHeld("KeyA", this.keys.A) ||
-        this.keyHeld("ArrowLeft", this.keys.LEFT) ||
-        this.pad.left;
-      var s =
-        this.keyHeld("KeyS", this.keys.S) ||
-        this.keyHeld("ArrowDown", this.keys.DOWN) ||
-        this.pad.down;
-      var d =
-        this.keyHeld("KeyD", this.keys.D) ||
-        this.keyHeld("ArrowRight", this.keys.RIGHT) ||
-        this.pad.right;
+      if (!this.hudKeys || !this.keys) return;
+      var w = this.keyHeld("KeyW", this.keys.W) || this.keyHeld("ArrowUp", this.keys.UP) || this.pad.up;
+      var a = this.keyHeld("KeyA", this.keys.A) || this.keyHeld("ArrowLeft", this.keys.LEFT) || this.pad.left;
+      var s = this.keyHeld("KeyS", this.keys.S) || this.keyHeld("ArrowDown", this.keys.DOWN) || this.pad.down;
+      var d = this.keyHeld("KeyD", this.keys.D) || this.keyHeld("ArrowRight", this.keys.RIGHT) || this.pad.right;
 
       this.setHudKeyActive("W", !!w);
       this.setHudKeyActive("A", !!a);
@@ -575,21 +462,14 @@
     bindControlsProbe() {
       var scene = this;
       window.__controlsTest = {
-        getX: function () {
-          return scene.player.x;
-        },
-        getY: function () {
-          return scene.player.y;
-        },
+        getX: function () { return scene.player.x; },
+        getY: function () { return scene.player.y; },
         getSpeed: function () {
           var velocity = scene.player.body.velocity;
           return Math.hypot(velocity.x, velocity.y);
         },
         getVelocity: function () {
-          return {
-            x: scene.player.body.velocity.x,
-            y: scene.player.body.velocity.y,
-          };
+          return { x: scene.player.body.velocity.x, y: scene.player.body.velocity.y };
         },
         setKeys: function (codes) {
           scene.injectedKeys = new Set(codes);
@@ -608,31 +488,20 @@
     }
 
     keyHeld(code, key) {
-      if (this.injectedKeys) {
-        return this.injectedKeys.has(code);
-      }
+      if (this.injectedKeys) return this.injectedKeys.has(code);
       return !!(key && key.isDown);
     }
 
     applyMovement() {
-      if (!this.player || !this.keys) {
-        return;
-      }
+      if (!this.player || !this.keys) return;
 
       var xAxis = 0;
       var yAxis = 0;
-      if (this.keyHeld("KeyA", this.keys.A) || this.keyHeld("ArrowLeft", this.keys.LEFT) || this.pad.left) {
-        xAxis -= 1;
-      }
-      if (this.keyHeld("KeyD", this.keys.D) || this.keyHeld("ArrowRight", this.keys.RIGHT) || this.pad.right) {
-        xAxis += 1;
-      }
-      if (this.keyHeld("KeyW", this.keys.W) || this.keyHeld("ArrowUp", this.keys.UP) || this.pad.up) {
-        yAxis -= 1;
-      }
-      if (this.keyHeld("KeyS", this.keys.S) || this.keyHeld("ArrowDown", this.keys.DOWN) || this.pad.down) {
-        yAxis += 1;
-      }
+      if (this.keyHeld("KeyA", this.keys.A) || this.keyHeld("ArrowLeft", this.keys.LEFT) || this.pad.left) xAxis -= 1;
+      if (this.keyHeld("KeyD", this.keys.D) || this.keyHeld("ArrowRight", this.keys.RIGHT) || this.pad.right) xAxis += 1;
+      if (this.keyHeld("KeyW", this.keys.W) || this.keyHeld("ArrowUp", this.keys.UP) || this.pad.up) yAxis -= 1;
+      if (this.keyHeld("KeyS", this.keys.S) || this.keyHeld("ArrowDown", this.keys.DOWN) || this.pad.down) yAxis += 1;
+
       xAxis = Math.max(-1, Math.min(1, xAxis));
       yAxis = Math.max(-1, Math.min(1, yAxis));
 
@@ -655,13 +524,12 @@
       if (vx === 0 && vy === 0) {
         if (this.player.anims.isPlaying) {
           this.player.anims.stop();
-          this.player.setTexture(`idle-${this.lastDir}`);
+          this.player.setTexture(`player-idle-${this.lastDir}`);
         }
         return;
       }
 
       let dir = this.lastDir;
-
       if (vx < 0) dir = "left";
       else if (vx > 0) dir = "right";
       else if (vy < 0) dir = "up";
@@ -675,9 +543,7 @@
     }
 
     update() {
-      if (!this.keys) {
-        this.createKeys();
-      }
+      if (!this.keys) this.createKeys();
       this.applyMovement();
       this.refreshHud();
       this.updatePlayerAnim();
@@ -686,9 +552,8 @@
 
   function boot() {
     var parent = document.getElementById("game-container");
-    if (!parent || typeof Phaser === "undefined") {
-      return;
-    }
+    if (!parent || typeof Phaser === "undefined") return;
+
     if (window.__mathPixelQuestGame) {
       window.__mathPixelQuestGame.destroy(true);
       window.__mathPixelQuestGame = null;
@@ -726,9 +591,7 @@
   function bootWhenFontReady() {
     var started = false;
     var start = function () {
-      if (started) {
-        return;
-      }
+      if (started) return;
       started = true;
       boot();
     };
