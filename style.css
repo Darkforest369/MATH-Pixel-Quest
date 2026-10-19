@@ -6,6 +6,7 @@ body {
   height: 100%;
   background: #070b14;
   overflow: hidden;
+  font-family: "Iansui", sans-serif;
 }
 
 #game-container {
@@ -13,6 +14,7 @@ body {
   height: 100%;
   background: #070b14;
   touch-action: none;
+  font-family: "Iansui", sans-serif;
 }
 
 #game-container canvas {
