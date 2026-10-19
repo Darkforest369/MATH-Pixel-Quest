@@ -1,7 +1,7 @@
 /*
  * Math Pixel Quest — walking prototype.
  * One scene, Arcade physics, runtime textures only.
- * Grass theme, dense tree borders, chibi player with 4-way animations.
+ * Grass theme, dense tree borders, high-quality chibi player with 4-way animations.
  */
 (function () {
   "use strict";
@@ -55,11 +55,10 @@
       this.bindControlsProbe();
     }
 
-    /* Texture generation */
     generateTextures() {
       this.generateGrassTextures();
       this.generateTreeTextures();
-      this.generatePlayerFrames();
+      this.generatePixelCharacter();
     }
 
     generateGrassTextures() {
@@ -131,123 +130,392 @@
       nearest(this, "tree_fg");
     }
 
-    generatePlayerFrames() {
-      const directions = ["down", "up", "left", "right"];
-      for (const dir of directions) {
-        for (let frame = 0; frame <= 2; frame++) {
-          const g = this.make.graphics({ add: false });
-          this.drawPlayerFrame(g, dir, frame);
-          const key = frame === 0 ? `player-idle-${dir}` : `player-walk-${dir}-${frame}`;
-          g.generateTexture(key, 32, 32);
-          g.destroy();
-          nearest(this, key);
+    /* High-quality chibi character generation using exact pixel arrays. */
+    generatePixelCharacter() {
+      const PALETTE = {
+        '.': null,       // transparent
+        'O': 0x2a2333,   // Outline
+        'S': 0xfcd5c5,   // Skin
+        'D': 0xe8a593,   // Skin Shadow
+        'P': 0xf79292,   // Blush
+        'H': 0x5c3a21,   // Hair Base
+        'L': 0x8b5a2b,   // Hair Highlight
+        'K': 0x3d2515,   // Hair Shadow
+        'R': 0xc93b3b,   // Shirt
+        'E': 0x962424,   // Shirt Shadow
+        'T': 0x4db6ac,   // Shorts
+        'U': 0x318d85,   // Shorts Shadow
+        'B': 0x4a2c1b,   // Shoes
+      };
+
+      const grids = {
+        'player-idle-down': [
+          "................................",
+          "..........OOOOOOOOOO............",
+          "........OOLHHHHHHHHKO...........",
+          ".......OLHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHKKKKKKKKHHKO..........",
+          ".......OHSSSSSSSSSSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSOSSSO..........",
+          ".......OSOSSSSSSSOSSSO..........",
+          ".......OSOSSSSSSSOSSSO..........",
+          ".......OSPSSSSSSSPSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          "........ODSSSSSSSSSDO...........",
+          ".........OOOOOOOOOOO............",
+          ".........ORRRRRRRRRO............",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........OEEEEEEEEEEEO...........",
+          ".........OTTTTTTTTTO............",
+          ".........OTTTTOTTTTO............",
+          ".........OUUUOUUUUOO............",
+          ".........OSSSOSSSOO.............",
+          ".........OOOOOOOOOO.............",
+          "........OBBBOOBBBOO.............",
+          "........OBBBOOBBBOO.............",
+          ".........OOOOOOOOOO.............",
+          "................................",
+          "................................",
+          "................................"
+        ],
+        'player-walk-down-1': [
+          "..........OOOOOOOOOO............",
+          "........OOLHHHHHHHHKO...........",
+          ".......OLHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHKKKKKKKKHHKO..........",
+          ".......OHSSSSSSSSSSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSOSSSO..........",
+          ".......OSOSSSSSSSOSSSO..........",
+          ".......OSOSSSSSSSOSSSO..........",
+          ".......OSPSSSSSSSPSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          "........ODSSSSSSSSSDO...........",
+          ".........OOOOOOOOOOO............",
+          ".........ORRRRRRRRRO............",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........OEEEEEEEEEEEO...........",
+          ".........OTTTTTTTTTO............",
+          "........OTTTTOTTTTO.............",
+          "........OUUUOUUUUOO.............",
+          "........OSSSOSSSOO..............",
+          "........OOOOOOOOOO..............",
+          ".......OBBBOOBBBOO..............",
+          ".......OBBBOOBBBOO..............",
+          "........OOOOOOOOOO..............",
+          "................................",
+          "................................",
+          "................................",
+          "................................"
+        ],
+        'player-walk-down-2': [
+          "..........OOOOOOOOOO............",
+          "........OOLHHHHHHHHKO...........",
+          ".......OLHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHKKKKKKKKHHKO..........",
+          ".......OHSSSSSSSSSSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSOSSSO..........",
+          ".......OSOSSSSSSSOSSSO..........",
+          ".......OSOSSSSSSSOSSSO..........",
+          ".......OSPSSSSSSSPSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          "........ODSSSSSSSSSDO...........",
+          ".........OOOOOOOOOOO............",
+          ".........ORRRRRRRRRO............",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........OEEEEEEEEEEEO...........",
+          ".........OTTTTTTTTTO............",
+          ".........OTTTTOTTTTO............",
+          ".........OUUUOUUUUOO............",
+          ".........OSSSOSSSOO.............",
+          ".........OOOOOOOOOO.............",
+          "..........OBBBOOBBBOO...........",
+          "..........OBBBOOBBBOO...........",
+          "..........OOOOOOOOOO............",
+          "................................",
+          "................................",
+          "................................",
+          "................................"
+        ],
+        'player-idle-up': [
+          "................................",
+          "..........OOOOOOOOOO............",
+          "........OOLHHHHHHHHKO...........",
+          ".......OLHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OKKKKKKKKKKKKKO..........",
+          "........OKKKKKKKKKKKO...........",
+          ".........OOOOOOOOOOO............",
+          ".........ORRRRRRRRRO............",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........OEEEEEEEEEEEO...........",
+          ".........OTTTTTTTTTO............",
+          ".........OTTTTOTTTTO............",
+          ".........OUUUOUUUUOO............",
+          ".........OSSSOSSSOO.............",
+          ".........OOOOOOOOOO.............",
+          "........OBBBOOBBBOO.............",
+          "........OBBBOOBBBOO.............",
+          ".........OOOOOOOOOO.............",
+          "................................",
+          "................................",
+          "................................"
+        ],
+        'player-walk-up-1': [
+          "..........OOOOOOOOOO............",
+          "........OOLHHHHHHHHKO...........",
+          ".......OLHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OKKKKKKKKKKKKKO..........",
+          "........OKKKKKKKKKKKO...........",
+          ".........OOOOOOOOOOO............",
+          ".........ORRRRRRRRRO............",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........OEEEEEEEEEEEO...........",
+          ".........OTTTTTTTTTO............",
+          "........OTTTTOTTTTO.............",
+          "........OUUUOUUUUOO.............",
+          "........OSSSOSSSOO..............",
+          "........OOOOOOOOOO..............",
+          ".......OBBBOOBBBOO..............",
+          ".......OBBBOOBBBOO..............",
+          "........OOOOOOOOOO..............",
+          "................................",
+          "................................",
+          "................................"
+        ],
+        'player-walk-up-2': [
+          "..........OOOOOOOOOO............",
+          "........OOLHHHHHHHHKO...........",
+          ".......OLHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OKKKKKKKKKKKKKO..........",
+          "........OKKKKKKKKKKKO...........",
+          ".........OOOOOOOOOOO............",
+          ".........ORRRRRRRRRO............",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........OEEEEEEEEEEEO...........",
+          ".........OTTTTTTTTTO............",
+          ".........OTTTTOTTTTO............",
+          ".........OUUUOUUUUOO............",
+          ".........OSSSOSSSOO.............",
+          ".........OOOOOOOOOO.............",
+          "..........OBBBOOBBBOO...........",
+          "..........OBBBOOBBBOO...........",
+          "..........OOOOOOOOOO............",
+          "................................",
+          "................................",
+          "................................"
+        ],
+        'player-idle-left': [
+          "................................",
+          "..........OOOOOOOOOO............",
+          "........OOLHHHHHHHHKO...........",
+          ".......OLHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHKKKKKKKKHHKO..........",
+          ".......OHSSSSSSSSSSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSSSSSO..........",
+          ".......OSPSSSSSSSSSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          "........ODSSSSSSSSSDO...........",
+          ".........OOOOOOOOOOO............",
+          ".........ORRRRRRRRRO............",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........OEEEEEEEEEEEO...........",
+          ".........OTTTTTTTTTO............",
+          ".........OTTTTOTTTTO............",
+          ".........OUUUOUUUUOO............",
+          ".........OSSSOSSSOO.............",
+          ".........OOOOOOOOOO.............",
+          "........OBBBOOBBBOO.............",
+          "........OBBBOOBBBOO.............",
+          ".........OOOOOOOOOO.............",
+          "................................",
+          "................................",
+          "................................"
+        ],
+        'player-walk-left-1': [
+          "..........OOOOOOOOOO............",
+          "........OOLHHHHHHHHKO...........",
+          ".......OLHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHKKKKKKKKHHKO..........",
+          ".......OHSSSSSSSSSSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSSSSSO..........",
+          ".......OSPSSSSSSSSSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          "........ODSSSSSSSSSDO...........",
+          ".........OOOOOOOOOOO............",
+          ".........ORRRRRRRRRO............",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........OEEEEEEEEEEEO...........",
+          ".........OTTTTTTTTTO............",
+          "........OTTTTOTTTTO.............",
+          "........OUUUOUUUUOO.............",
+          "........OSSSOSSSOO..............",
+          "........OOOOOOOOOO..............",
+          ".......OBBBOOBBBOO..............",
+          ".......OBBBOOBBBOO..............",
+          "........OOOOOOOOOO..............",
+          "................................",
+          "................................",
+          "................................",
+          "................................"
+        ],
+        'player-walk-left-2': [
+          "..........OOOOOOOOOO............",
+          "........OOLHHHHHHHHKO...........",
+          ".......OLHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHHHHHHHHHHHKO..........",
+          ".......OHHKKKKKKKKHHKO..........",
+          ".......OHSSSSSSSSSSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSSSSSO..........",
+          ".......OSOSSSSSSSSSSSO..........",
+          ".......OSPSSSSSSSSSSSO..........",
+          ".......OSSSSSSSSSSSSSO..........",
+          "........ODSSSSSSSSSDO...........",
+          ".........OOOOOOOOOOO............",
+          ".........ORRRRRRRRRO............",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........ORRRRRRRRRRRO...........",
+          "........OEEEEEEEEEEEO...........",
+          ".........OTTTTTTTTTO............",
+          ".........OTTTTOTTTTO............",
+          ".........OUUUOUUUUOO............",
+          ".........OSSSOSSSOO.............",
+          ".........OOOOOOOOOO.............",
+          "..........OBBBOOBBBOO...........",
+          "..........OBBBOOBBBOO...........",
+          "..........OOOOOOOOOO............",
+          "................................",
+          "................................",
+          "................................",
+          "................................"
+        ]
+      };
+
+      const keys = Object.keys(grids);
+      for (const key of keys) {
+        const grid = grids[key];
+        const g = this.make.graphics({ add: false });
+
+        // Draw pixel shadow
+        g.fillStyle(0x000000, 0.3);
+        for (let y = 27; y <= 29; y++) {
+          const w = y === 27 ? 8 : (y === 28 ? 12 : 10);
+          const startX = 16 - Math.floor(w / 2);
+          g.fillRect(startX, y, w, 1);
         }
-      }
-    }
 
-    drawPlayerFrame(g, dir, frame) {
-      const OUT = 0x181425;
-      const HAIR = 0x673d24;
-      const HAIR_HI = 0x8a5a3a;
-      const SKIN = 0xffd5b3;
-      const SKIN_SH = 0xdfa482;
-      const SHIRT = 0xd34c4c;
-      const SHIRT_SH = 0xa63232;
-      const SHORTS = 0x3ecbcd;
-      const SHORTS_SH = 0x2e9ea0;
-      const SHOE = 0x3b222a;
+        // Draw grid
+        for (let y = 0; y < grid.length; y++) {
+          const row = grid[y];
+          for (let x = 0; x < row.length; x++) {
+            const char = row[x];
+            const color = PALETTE[char];
+            if (color) {
+              g.fillStyle(color, 1);
+              g.fillRect(x, y, 1, 1);
+            }
+          }
+        }
 
-      function f(x, y, w, h, c) {
-        g.fillStyle(c, 1);
-        g.fillRect(x, y, w, h);
-      }
+        g.generateTexture(key, 32, 32);
+        g.destroy();
+        nearest(this, key);
 
-      // Shadow
-      g.fillStyle(0x000000, 0.3);
-      g.fillRect(10, 29, 12, 2);
-      g.fillStyle(0x000000, 0.15);
-      g.fillRect(8, 29, 16, 2);
+        // For right facing, flip the left texture
+        if (key.includes('left')) {
+          const rightKey = key.replace('left', 'right');
+          const rg = this.make.graphics({ add: false });
 
-      // Body Outline
-      if (dir === 'down' || dir === 'up') {
-        f(9, 19, 14, 11, OUT);
-        f(10, 20, 12, 9, SHIRT);
-        f(10, 24, 12, 2, SHIRT_SH);
-        f(10, 26, 12, 3, SHORTS);
-        f(10, 29, 12, 1, SHORTS_SH);
-      } else {
-        f(11, 19, 10, 11, OUT);
-        f(12, 20, 8, 9, SHIRT);
-        f(12, 24, 8, 2, SHIRT_SH);
-        f(12, 26, 8, 3, SHORTS);
-        f(12, 29, 8, 1, SHORTS_SH);
-      }
+          rg.fillStyle(0x000000, 0.3);
+          for (let y = 27; y <= 29; y++) {
+            const w = y === 27 ? 8 : (y === 28 ? 12 : 10);
+            const startX = 16 - Math.floor(w / 2);
+            rg.fillRect(startX, y, w, 1);
+          }
 
-      // Legs & Shoes
-      let legY1 = 30, legY2 = 30;
-      if (frame === 1) legY1 = 29;
-      if (frame === 2) legY2 = 29;
+          for (let y = 0; y < grid.length; y++) {
+            const row = grid[y];
+            for (let x = 0; x < row.length; x++) {
+              const char = row[x];
+              const color = PALETTE[char];
+              if (color) {
+                rg.fillStyle(color, 1);
+                const px = 31 - x;
+                rg.fillRect(px, y, 1, 1);
+              }
+            }
+          }
 
-      if (dir === 'down' || dir === 'up') {
-        f(10, legY1, 4, 32 - legY1, OUT);
-        f(11, legY1 + 1, 2, 32 - legY1 - 1, SHOE);
-        f(18, legY2, 4, 32 - legY2, OUT);
-        f(19, legY2 + 1, 2, 32 - legY2 - 1, SHOE);
-      } else if (dir === 'right') {
-        f(17, legY2, 4, 32 - legY2, OUT);
-        f(18, legY2 + 1, 2, 32 - legY2 - 1, SHOE);
-        f(12, legY1, 4, 32 - legY1, OUT);
-        f(13, legY1 + 1, 2, 32 - legY1 - 1, SHOE);
-      } else if (dir === 'left') {
-        f(11, legY2, 4, 32 - legY2, OUT);
-        f(12, legY2 + 1, 2, 32 - legY2 - 1, SHOE);
-        f(16, legY1, 4, 32 - legY1, OUT);
-        f(17, legY1 + 1, 2, 32 - legY1 - 1, SHOE);
-      }
-
-      // Head
-      if (dir === 'down') {
-        f(8, 6, 16, 15, OUT);
-        f(9, 6, 14, 6, HAIR);
-        f(9, 12, 2, 4, HAIR);
-        f(21, 12, 2, 4, HAIR);
-        f(10, 7, 12, 2, HAIR_HI);
-        f(11, 11, 10, 9, SKIN);
-        f(11, 19, 10, 1, SKIN_SH);
-        f(13, 14, 2, 3, OUT);
-        f(19, 14, 2, 3, OUT);
-        f(13, 14, 1, 1, 0xffffff);
-        f(19, 14, 1, 1, 0xffffff);
-        f(12, 16, 2, 1, 0xff8888);
-        f(20, 16, 2, 1, 0xff8888);
-        f(16, 17, 2, 1, OUT);
-      } else if (dir === 'up') {
-        f(8, 6, 16, 15, OUT);
-        f(9, 6, 14, 14, HAIR);
-        f(10, 7, 12, 4, HAIR_HI);
-        f(9, 18, 14, 2, HAIR);
-      } else if (dir === 'right') {
-        f(9, 6, 14, 15, OUT);
-        f(10, 6, 12, 6, HAIR);
-        f(10, 12, 4, 6, HAIR);
-        f(11, 7, 10, 2, HAIR_HI);
-        f(14, 12, 8, 9, SKIN);
-        f(14, 19, 8, 1, SKIN_SH);
-        f(18, 14, 2, 3, OUT);
-        f(18, 14, 1, 1, 0xffffff);
-        f(18, 16, 2, 1, 0xff8888);
-        f(21, 15, 1, 1, SKIN_SH);
-      } else if (dir === 'left') {
-        f(9, 6, 14, 15, OUT);
-        f(10, 6, 12, 6, HAIR);
-        f(18, 12, 4, 6, HAIR);
-        f(11, 7, 10, 2, HAIR_HI);
-        f(10, 12, 8, 9, SKIN);
-        f(10, 19, 8, 1, SKIN_SH);
-        f(12, 14, 2, 3, OUT);
-        f(13, 14, 1, 1, 0xffffff);
-        f(12, 16, 2, 1, 0xff8888);
-        f(10, 15, 1, 1, SKIN_SH);
+          rg.generateTexture(rightKey, 32, 32);
+          rg.destroy();
+          nearest(this, rightKey);
+        }
       }
     }
 
@@ -284,7 +552,6 @@
     createBorders() {
       this.physics.world.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
-      // Top & Bottom Borders
       for (let x = 12; x < MAP_WIDTH; x += 24) {
         this.add.image(x, 32, "tree_bg").setDepth(2);
         this.add.image(x, 38, "tree_fg").setDepth(3);
@@ -293,7 +560,6 @@
         this.add.image(x, MAP_HEIGHT - 38, "tree_fg").setDepth(3);
       }
 
-      // Left & Right Borders
       for (let y = 12; y < MAP_HEIGHT; y += 24) {
         this.add.image(32, y, "tree_bg").setDepth(2);
         this.add.image(38, y, "tree_fg").setDepth(3);
@@ -302,7 +568,6 @@
         this.add.image(MAP_WIDTH - 38, y, "tree_fg").setDepth(3);
       }
 
-      // Invisible physics bodies for collision
       this.borderBodies = this.physics.add.staticGroup();
       this.addBorderBody(MAP_WIDTH / 2, 32, MAP_WIDTH, 64);
       this.addBorderBody(MAP_WIDTH / 2, MAP_HEIGHT - 32, MAP_WIDTH, 64);
@@ -324,8 +589,11 @@
       this.player.setDepth(5);
       this.player.setCollideWorldBounds(true);
       this.player.body.setAllowGravity(false);
-      this.player.body.setSize(10, 10);
-      this.player.body.setOffset(11, 20);
+      
+      // Match physics body to the feet of the new sprite
+      this.player.body.setSize(12, 6);
+      this.player.body.setOffset(10, 23);
+      
       this.player.refreshBody();
       this.physics.add.collider(this.player, this.borderBodies);
     }
@@ -338,9 +606,7 @@
     }
 
     createKeys() {
-      if (this.keys || !this.input.keyboard) {
-        return;
-      }
+      if (this.keys || !this.input.keyboard) return;
       this.keys = {
         W: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
         A: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
@@ -524,8 +790,8 @@
       if (vx === 0 && vy === 0) {
         if (this.player.anims.isPlaying) {
           this.player.anims.stop();
-          this.player.setTexture(`player-idle-${this.lastDir}`);
         }
+        this.player.setTexture(`player-idle-${this.lastDir}`);
         return;
       }
 
