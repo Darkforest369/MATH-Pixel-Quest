@@ -11,20 +11,52 @@
   var MAP_HEIGHT = 1200;
   var TILE = 32;
   var SPEED = 180;
+  var FONT_FAMILY = '"Iansui", sans-serif';
 
-  var OUTLINE = 0x141820;
-  var SKIN = 0xf2c7a0;
-  var HOOD = 0x1d4ed8;
-  var HOOD_DARK = 0x172554;
-  var ROBE = 0x2563eb;
-  var CYAN = 0x3ec6c6;
-  var GOLD = 0xe6b84d;
-  var BOOT = 0x4a3424;
-  var EYE = 0xf8fbff;
+  /* Player palette */
+  var OUTLINE = 0x0b0f18;
+  var SKIN = 0xf6c9a4;
+  var SKIN_SHADE = 0xd79c74;
+  var CHEEK = 0xf0a08c;
+  var MOUTH = 0xb9795a;
+  var EYE = 0x11182a;
+  var EYE_LIGHT = 0xdff2ff;
+  var HAT = 0x2f43b8;
+  var HAT_LIGHT = 0x5468e8;
+  var HAT_DARK = 0x1d2a7c;
+  var ROBE = 0x3a55cf;
+  var ROBE_LIGHT = 0x5c78ee;
+  var ROBE_DARK = 0x27399c;
+  var GOLD = 0xe9c05a;
+  var GOLD_LIGHT = 0xf7dd8e;
+  var BOOT_LIGHT = 0x9a6b46;
+  var BOOT_DARK = 0x6b4630;
+
+  /* HUD palette */
+  var KEY_IDLE_FILL = 0x0c1424;
+  var KEY_IDLE_BORDER = 0x3ec6c6;
+  var KEY_IDLE_TEXT = "#e8f6ff";
+  var KEY_ACTIVE_FILL = 0x63e6ff;
+  var KEY_ACTIVE_BORDER = 0xffffff;
+  var KEY_ACTIVE_TEXT = "#06121c";
 
   function paintRect(graphics, x, y, w, h, color) {
     graphics.fillStyle(color, 1);
     graphics.fillRect(x, y, w, h);
+  }
+
+  /* Fill one pixel row with a base colour plus a light left edge and dark right edge. */
+  function shadeRow(graphics, x, y, w, base, light, dark) {
+    if (w <= 0) {
+      return;
+    }
+    paintRect(graphics, x, y, w, 1, base);
+    if (w >= 3) {
+      paintRect(graphics, x, y, 1, 1, light);
+      paintRect(graphics, x + w - 1, y, 1, 1, dark);
+    } else if (w === 2) {
+      paintRect(graphics, x, y, 1, 1, light);
+    }
   }
 
   function nearest(scene, key) {
@@ -40,6 +72,7 @@
       this.player = null;
       this.keys = null;
       this.injectedKeys = null;
+      this.hudKeys = null;
       this.pad = { up: false, down: false, left: false, right: false };
     }
 
@@ -49,67 +82,34 @@
       this.createBorders();
       this.createPlayer();
       this.setupCamera();
+      this.createKeys();
       this.createHud();
-      this.createTouchPad();
       this.bindControlsProbe();
     }
 
-    /* Texture generation — floor, wall, markings, and the player. */
+    /* Texture generation — floor, wall, and the player. Nothing else. */
     generateTextures() {
       this.generateFloorTexture();
       this.generateWallTexture();
-      this.generateMarkTexture("mark-plus", function (g) {
-        paintRect(g, 7, 2, 2, 12, CYAN);
-        paintRect(g, 2, 7, 12, 2, CYAN);
-      });
-      this.generateMarkTexture("mark-ring", function (g) {
-        paintRect(g, 4, 1, 8, 2, GOLD);
-        paintRect(g, 4, 13, 8, 2, GOLD);
-        paintRect(g, 1, 4, 2, 8, GOLD);
-        paintRect(g, 13, 4, 2, 8, GOLD);
-        paintRect(g, 3, 2, 2, 2, GOLD);
-        paintRect(g, 11, 2, 2, 2, GOLD);
-        paintRect(g, 3, 12, 2, 2, GOLD);
-        paintRect(g, 11, 12, 2, 2, GOLD);
-      });
-      this.generateMarkTexture("mark-diamond", function (g) {
-        paintRect(g, 7, 1, 2, 2, 0xf8fbff);
-        paintRect(g, 5, 3, 2, 2, 0xf8fbff);
-        paintRect(g, 9, 3, 2, 2, 0xf8fbff);
-        paintRect(g, 3, 5, 2, 2, 0xf8fbff);
-        paintRect(g, 11, 5, 2, 2, 0xf8fbff);
-        paintRect(g, 3, 9, 2, 2, 0xf8fbff);
-        paintRect(g, 11, 9, 2, 2, 0xf8fbff);
-        paintRect(g, 5, 11, 2, 2, 0xf8fbff);
-        paintRect(g, 9, 11, 2, 2, 0xf8fbff);
-        paintRect(g, 7, 13, 2, 2, 0xf8fbff);
-        paintRect(g, 7, 7, 2, 2, CYAN);
-      });
       this.generatePlayerTexture();
     }
 
+    /* Minimal floor: dark slate base with a very subtle grid seam. */
     generateFloorTexture() {
       var g = this.make.graphics({ add: false });
       var s = TILE;
-      paintRect(g, 0, 0, s, s, 0x152033);
-      paintRect(g, 1, 1, s - 2, s - 2, 0x1c2c4a);
-      paintRect(g, 2, 2, s - 4, 1, 0x31486e);
-      paintRect(g, 2, 2, 1, s - 4, 0x31486e);
-      paintRect(g, 2, s - 3, s - 4, 1, 0x10192b);
-      paintRect(g, s - 3, 2, 1, s - 4, 0x10192b);
-      paintRect(g, 15, 8, 2, 2, 0x3ec6c6);
-      paintRect(g, 13, 10, 2, 2, 0x3ec6c6);
-      paintRect(g, 17, 10, 2, 2, 0x3ec6c6);
-      paintRect(g, 11, 12, 2, 2, 0x3ec6c6);
-      paintRect(g, 19, 12, 2, 2, 0x3ec6c6);
-      paintRect(g, 13, 14, 2, 2, 0x3ec6c6);
-      paintRect(g, 17, 14, 2, 2, 0x3ec6c6);
-      paintRect(g, 15, 16, 2, 2, 0x3ec6c6);
-      paintRect(g, 15, 12, 2, 2, 0xe6b84d);
-      paintRect(g, 4, 4, 2, 2, 0xe6b84d);
-      paintRect(g, 26, 4, 2, 2, 0xe6b84d);
-      paintRect(g, 4, 26, 2, 2, 0xe6b84d);
-      paintRect(g, 26, 26, 2, 2, 0xe6b84d);
+
+      g.fillStyle(0x161d2b, 1);
+      g.fillRect(0, 0, s, s);
+
+      g.fillStyle(0x1e2737, 1);
+      g.fillRect(0, 0, s, 1);
+      g.fillRect(0, 0, 1, s);
+
+      g.fillStyle(0x10151e, 1);
+      g.fillRect(0, s - 1, s, 1);
+      g.fillRect(s - 1, 0, 1, s);
+
       g.generateTexture("floor", s, s);
       g.destroy();
       nearest(this, "floor");
@@ -136,72 +136,100 @@
       nearest(this, "wall");
     }
 
-    generateMarkTexture(key, draw) {
-      var g = this.make.graphics({ add: false });
-      draw(g);
-      g.generateTexture(key, 16, 16);
-      g.destroy();
-      nearest(this, key);
-    }
-
+    /* 32x32 chibi mage: outlined, shaded, with a soft shadow at the feet. */
     generatePlayerTexture() {
       var g = this.make.graphics({ add: false });
-      /* Hood and outline. */
-      paintRect(g, 7, 1, 10, 1, OUTLINE);
-      paintRect(g, 6, 2, 12, 8, OUTLINE);
-      paintRect(g, 7, 2, 10, 7, HOOD);
-      paintRect(g, 8, 3, 8, 5, HOOD_DARK);
-      /* Face. */
-      paintRect(g, 9, 4, 6, 4, SKIN);
-      paintRect(g, 9, 5, 2, 2, EYE);
-      paintRect(g, 10, 5, 1, 1, OUTLINE);
-      paintRect(g, 13, 5, 2, 2, EYE);
-      paintRect(g, 14, 5, 1, 1, OUTLINE);
-      paintRect(g, 11, 7, 2, 1, 0xd7a882);
-      /* Robe, cyan collar, gold plus. */
-      paintRect(g, 6, 10, 12, 1, OUTLINE);
-      paintRect(g, 5, 11, 14, 8, OUTLINE);
-      paintRect(g, 6, 11, 12, 7, ROBE);
-      paintRect(g, 7, 11, 10, 1, CYAN);
-      paintRect(g, 11, 13, 2, 4, GOLD);
-      paintRect(g, 10, 14, 4, 2, GOLD);
+      var i;
+      var row;
+
+      /* Soft pixel ellipse shadow under the feet. */
+      g.fillStyle(0x03060b, 0.30);
+      g.fillRect(9, 28, 14, 1);
+      g.fillStyle(0x03060b, 0.38);
+      g.fillRect(8, 29, 16, 1);
+      g.fillStyle(0x03060b, 0.22);
+      g.fillRect(10, 30, 12, 1);
+
+      /* Hat cone — dark silhouette first. */
+      var coneOutline = [
+        [2, 15, 3],
+        [3, 14, 5],
+        [4, 13, 7],
+        [5, 13, 7],
+        [6, 12, 9],
+        [7, 11, 11],
+        [8, 11, 11],
+        [9, 10, 13],
+      ];
+      for (i = 0; i < coneOutline.length; i += 1) {
+        row = coneOutline[i];
+        paintRect(g, row[1], row[0], row[2], 1, OUTLINE);
+      }
+
+      /* Hat cone — shaded fill. */
+      var coneFill = [
+        [3, 15, 3],
+        [4, 14, 5],
+        [5, 14, 5],
+        [6, 13, 7],
+        [7, 12, 9],
+        [8, 12, 9],
+      ];
+      for (i = 0; i < coneFill.length; i += 1) {
+        row = coneFill[i];
+        shadeRow(g, row[1], row[0], row[2], HAT, HAT_LIGHT, HAT_DARK);
+      }
+      paintRect(g, 11, 9, 11, 1, GOLD);
+
+      /* Hat brim. */
+      paintRect(g, 7, 10, 19, 3, OUTLINE);
+      paintRect(g, 8, 10, 17, 1, HAT_LIGHT);
+      paintRect(g, 8, 11, 17, 1, HAT);
+
+      /* Head. */
+      paintRect(g, 9, 12, 15, 8, OUTLINE);
+      paintRect(g, 10, 13, 13, 6, SKIN);
+      paintRect(g, 10, 18, 13, 1, SKIN_SHADE);
+
+      /* Eyes with tiny highlights. */
+      paintRect(g, 12, 15, 2, 2, EYE);
+      paintRect(g, 19, 15, 2, 2, EYE);
+      paintRect(g, 12, 15, 1, 1, EYE_LIGHT);
+      paintRect(g, 19, 15, 1, 1, EYE_LIGHT);
+
+      /* Cheeks and mouth. */
+      paintRect(g, 11, 17, 2, 1, CHEEK);
+      paintRect(g, 20, 17, 2, 1, CHEEK);
+      paintRect(g, 15, 17, 2, 1, MOUTH);
+
+      /* Robe silhouette, then shaded fill. */
+      paintRect(g, 8, 19, 17, 7, OUTLINE);
+      shadeRow(g, 10, 19, 13, ROBE, ROBE_LIGHT, ROBE_DARK);
+      for (i = 20; i <= 22; i += 1) {
+        shadeRow(g, 9, i, 15, ROBE, ROBE_LIGHT, ROBE_DARK);
+      }
+      paintRect(g, 9, 23, 15, 1, GOLD);
+      paintRect(g, 15, 23, 2, 1, GOLD_LIGHT);
+      shadeRow(g, 9, 24, 15, ROBE, ROBE_LIGHT, ROBE_DARK);
+
       /* Boots. */
-      paintRect(g, 7, 18, 4, 4, OUTLINE);
-      paintRect(g, 13, 18, 4, 4, OUTLINE);
-      paintRect(g, 8, 19, 2, 2, BOOT);
-      paintRect(g, 14, 19, 2, 2, BOOT);
-      g.generateTexture("player", 24, 24);
+      paintRect(g, 10, 25, 6, 3, OUTLINE);
+      paintRect(g, 17, 25, 6, 3, OUTLINE);
+      paintRect(g, 11, 25, 4, 1, BOOT_LIGHT);
+      paintRect(g, 11, 26, 4, 1, BOOT_DARK);
+      paintRect(g, 18, 25, 4, 1, BOOT_LIGHT);
+      paintRect(g, 18, 26, 4, 1, BOOT_DARK);
+
+      g.generateTexture("player", 32, 32);
       g.destroy();
       nearest(this, "player");
     }
 
+    /* Clean floor only — no floating map decorations. */
     createWorld() {
-      var floor = this.add.tileSprite(
-        MAP_WIDTH / 2,
-        MAP_HEIGHT / 2,
-        MAP_WIDTH,
-        MAP_HEIGHT,
-        "floor"
-      );
-      floor.setDepth(0);
-
-      var marks = [
-        { x: 620, y: 460, key: "mark-plus", scale: 3 },
-        { x: 1040, y: 520, key: "mark-ring", scale: 3 },
-        { x: 860, y: 760, key: "mark-diamond", scale: 3 },
-        { x: 480, y: 820, key: "mark-plus", scale: 2 },
-        { x: 1180, y: 860, key: "mark-ring", scale: 2 },
-        { x: 700, y: 300, key: "mark-diamond", scale: 2 },
-      ];
-      var i;
-      for (i = 0; i < marks.length; i += 1) {
-        var mark = marks[i];
-        this.add
-          .image(mark.x, mark.y, mark.key)
-          .setScale(mark.scale)
-          .setDepth(1)
-          .setAlpha(0.95);
-      }
+      this.add
+        .tileSprite(MAP_WIDTH / 2, MAP_HEIGHT / 2, MAP_WIDTH, MAP_HEIGHT, "floor")
+        .setDepth(0);
     }
 
     /* Border setup — visible wall tiles plus immovable physics bodies. */
@@ -220,11 +248,6 @@
       this.add
         .tileSprite(MAP_WIDTH - TILE / 2, MAP_HEIGHT / 2, TILE, MAP_HEIGHT, "wall")
         .setDepth(2);
-
-      var seam = this.add.graphics();
-      seam.lineStyle(2, CYAN, 1);
-      seam.strokeRect(TILE, TILE, MAP_WIDTH - TILE * 2, MAP_HEIGHT - TILE * 2);
-      seam.setDepth(3);
 
       this.borderBodies = this.physics.add.staticGroup();
       this.addBorderBody(MAP_WIDTH / 2, TILE / 2, MAP_WIDTH, TILE);
@@ -247,8 +270,9 @@
       this.player.setDepth(5);
       this.player.setCollideWorldBounds(true);
       this.player.body.setAllowGravity(false);
-      this.player.body.setSize(12, 16);
-      this.player.body.setOffset(6, 6);
+      /* Texture is 32x32; keep the collider centred and flush with the feet. */
+      this.player.body.setSize(14, 16);
+      this.player.body.setOffset(9, 12);
       this.player.refreshBody();
       this.physics.add.collider(this.player, this.borderBodies);
     }
@@ -261,55 +285,153 @@
       camera.roundPixels = true;
     }
 
-    createHud() {
-      this.add
-        .text(16, 14, "WASD to move", {
-          fontFamily: "Courier New, Courier, monospace",
-          fontSize: "16px",
-          color: "#e8f6ff",
-          backgroundColor: "#0c1424cc",
-          padding: { x: 10, y: 6 },
-        })
-        .setScrollFactor(0)
-        .setDepth(20);
+    createKeys() {
+      if (this.keys || !this.input.keyboard) {
+        return;
+      }
+      this.keys = {
+        W: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+        A: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+        S: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+        D: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+        UP: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+        DOWN: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+        LEFT: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+        RIGHT: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
+      };
+      this.input.keyboard.addCapture([
+        Phaser.Input.Keyboard.KeyCodes.W,
+        Phaser.Input.Keyboard.KeyCodes.A,
+        Phaser.Input.Keyboard.KeyCodes.S,
+        Phaser.Input.Keyboard.KeyCodes.D,
+        Phaser.Input.Keyboard.KeyCodes.UP,
+        Phaser.Input.Keyboard.KeyCodes.DOWN,
+        Phaser.Input.Keyboard.KeyCodes.LEFT,
+        Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      ]);
     }
 
-    createTouchPad() {
-      var buttons = [
-        { x: 104, y: 400, label: "W", set: "up" },
-        { x: 48, y: 456, label: "A", set: "left" },
-        { x: 160, y: 456, label: "D", set: "right" },
-        { x: 104, y: 512, label: "S", set: "down" },
-      ];
+    /* Small WASD key cluster in the top-left corner. */
+    createHud() {
       var scene = this;
-      buttons.forEach(function (spec) {
-        var bg = scene.add
-          .rectangle(spec.x, spec.y, 52, 52, 0x0c1424, 0.88)
-          .setScrollFactor(0)
-          .setDepth(20);
-        bg.setStrokeStyle(2, CYAN, 1);
-        bg.setInteractive();
-        scene.add
-          .text(spec.x, spec.y, spec.label, {
-            fontFamily: "Courier New, Courier, monospace",
-            fontSize: "16px",
-            color: "#e8f6ff",
+      var keySize = 26;
+      var gap = 4;
+      var step = keySize + gap;
+      var originX = 16;
+      var originY = 16;
+
+      var layout = [
+        { id: "W", flag: "up", col: 1, row: 0 },
+        { id: "A", flag: "left", col: 0, row: 1 },
+        { id: "S", flag: "down", col: 1, row: 1 },
+        { id: "D", flag: "right", col: 2, row: 1 },
+      ];
+
+      this.hudKeys = {};
+
+      layout.forEach(function (spec) {
+        var px = originX + spec.col * step;
+        var py = originY + spec.row * step;
+
+        var gfx = scene.add.graphics().setScrollFactor(0).setDepth(30);
+
+        var label = scene.add
+          .text(px, py, spec.id, {
+            fontFamily: FONT_FAMILY,
+            fontSize: "14px",
+            color: KEY_IDLE_TEXT,
           })
           .setOrigin(0.5)
           .setScrollFactor(0)
-          .setDepth(21);
-        var press = function () {
-          scene.pad[spec.set] = true;
+          .setDepth(31);
+
+        var entry = {
+          id: spec.id,
+          flag: spec.flag,
+          px: px,
+          py: py,
+          size: keySize,
+          gfx: gfx,
+          label: label,
+          active: false,
         };
-        var release = function () {
-          scene.pad[spec.set] = false;
-        };
-        bg.on("pointerdown", press);
-        bg.on("pointerup", release);
-        bg.on("pointerout", release);
-        bg.on("pointerupoutside", release);
+
+        scene.drawHudKey(entry, false);
+
+        /* Touch / click support on the key itself (screen-space, scroll factor 0). */
+        var zone = scene.add
+          .zone(px, py, keySize, keySize)
+          .setScrollFactor(0)
+          .setDepth(32);
+        zone.setInteractive(
+          new Phaser.Geom.Rectangle(0, 0, keySize, keySize),
+          Phaser.Geom.Rectangle.Contains
+        );
+        zone.on("pointerdown", function () {
+          scene.pad[spec.flag] = true;
+        });
+        zone.on("pointerup", function () {
+          scene.pad[spec.flag] = false;
+        });
+        zone.on("pointerout", function () {
+          scene.pad[spec.flag] = false;
+        });
+        zone.on("pointerupoutside", function () {
+          scene.pad[spec.flag] = false;
+        });
+
+        scene.hudKeys[spec.id] = entry;
       });
-      this.input.addPointer(3);
+    }
+
+    drawHudKey(entry, active) {
+      var g = entry.gfx;
+      var half = entry.size / 2;
+      g.clear();
+      g.fillStyle(active ? KEY_ACTIVE_FILL : KEY_IDLE_FILL, active ? 1 : 0.9);
+      g.fillRoundedRect(entry.px - half, entry.py - half, entry.size, entry.size, 6);
+      g.lineStyle(2, active ? KEY_ACTIVE_BORDER : KEY_IDLE_BORDER, 1);
+      g.strokeRoundedRect(entry.px - half, entry.py - half, entry.size, entry.size, 6);
+    }
+
+    setHudKeyActive(id, active) {
+      if (!this.hudKeys) {
+        return;
+      }
+      var entry = this.hudKeys[id];
+      if (!entry || entry.active === active) {
+        return;
+      }
+      entry.active = active;
+      this.drawHudKey(entry, active);
+      entry.label.setColor(active ? KEY_ACTIVE_TEXT : KEY_IDLE_TEXT);
+    }
+
+    refreshHud() {
+      if (!this.hudKeys || !this.keys) {
+        return;
+      }
+      var w =
+        this.keyHeld("KeyW", this.keys.W) ||
+        this.keyHeld("ArrowUp", this.keys.UP) ||
+        this.pad.up;
+      var a =
+        this.keyHeld("KeyA", this.keys.A) ||
+        this.keyHeld("ArrowLeft", this.keys.LEFT) ||
+        this.pad.left;
+      var s =
+        this.keyHeld("KeyS", this.keys.S) ||
+        this.keyHeld("ArrowDown", this.keys.DOWN) ||
+        this.pad.down;
+      var d =
+        this.keyHeld("KeyD", this.keys.D) ||
+        this.keyHeld("ArrowRight", this.keys.RIGHT) ||
+        this.pad.right;
+
+      this.setHudKeyActive("W", !!w);
+      this.setHudKeyActive("A", !!a);
+      this.setHudKeyActive("S", !!s);
+      this.setHudKeyActive("D", !!d);
     }
 
     bindControlsProbe() {
@@ -388,29 +510,11 @@
     }
 
     update() {
-      if (!this.keys && this.input.keyboard) {
-        this.keys = {
-          W: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-          A: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-          S: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-          D: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-          UP: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
-          DOWN: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
-          LEFT: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
-          RIGHT: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
-        };
-        this.input.keyboard.addCapture([
-          Phaser.Input.Keyboard.KeyCodes.W,
-          Phaser.Input.Keyboard.KeyCodes.A,
-          Phaser.Input.Keyboard.KeyCodes.S,
-          Phaser.Input.Keyboard.KeyCodes.D,
-          Phaser.Input.Keyboard.KeyCodes.UP,
-          Phaser.Input.Keyboard.KeyCodes.DOWN,
-          Phaser.Input.Keyboard.KeyCodes.LEFT,
-          Phaser.Input.Keyboard.KeyCodes.RIGHT,
-        ]);
+      if (!this.keys) {
+        this.createKeys();
       }
       this.applyMovement();
+      this.refreshHud();
     }
   }
 
@@ -453,13 +557,36 @@
     });
   }
 
+  /* Wait (briefly) for the Iansui webfont so Phaser Text renders with it. */
+  function bootWhenFontReady() {
+    var started = false;
+    var start = function () {
+      if (started) {
+        return;
+      }
+      started = true;
+      boot();
+    };
+
+    if (document.fonts && typeof document.fonts.load === "function") {
+      try {
+        document.fonts.load('16px "Iansui"').then(start, start);
+      } catch (err) {
+        start();
+      }
+      window.setTimeout(start, 1200);
+    } else {
+      start();
+    }
+  }
+
   window.__bootMathPixelQuest = boot;
 
   if (!window.__MPQ_MANUAL_BOOT) {
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", boot);
+      document.addEventListener("DOMContentLoaded", bootWhenFontReady);
     } else {
-      boot();
+      bootWhenFontReady();
     }
   }
 })();
